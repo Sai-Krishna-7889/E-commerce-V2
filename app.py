@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import yfinance as yf
 from datetime import datetime
 
 # =========================================================
@@ -189,7 +190,7 @@ page = st.sidebar.radio(
         "📊 Sales Dashboard",
         "🏷️ Brand Analysis",
         "⭐ Product Reviews",
-        "🤝 Business Proposals"
+        "🤝 Business Proposals",
         "📈 Stock Market Analysis"
     ]
 )
@@ -950,7 +951,6 @@ elif page == "🤝 Business Proposals":
 
 elif page == "📈 Stock Market Analysis":
 
-    import yfinance as yf
 
     st.title("📈 Company Stock Market Analysis")
 
