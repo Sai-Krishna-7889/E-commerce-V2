@@ -190,6 +190,7 @@ page = st.sidebar.radio(
         "🏷️ Brand Analysis",
         "⭐ Product Reviews",
         "🤝 Business Proposals"
+        "📈 Stock Market Analysis"
     ]
 )
 
@@ -942,6 +943,285 @@ elif page == "🤝 Business Proposals":
         st.dataframe(
             proposals_df,
             use_container_width=True
+        )
+    # =========================================================
+# STOCK MARKET ANALYSIS
+# =========================================================
+
+elif page == "📈 Stock Market Analysis":
+
+    import yfinance as yf
+
+    st.title("📈 Company Stock Market Analysis")
+
+    st.write(
+        "View historical stock-price fluctuations of selected "
+        "companies for informational reference."
+    )
+
+    st.warning(
+        "This section displays historical market data only. "
+        "It is not financial advice and does not predict future stock prices."
+    )
+
+    # -----------------------------------------------------
+    # COMPANY STOCK LIST
+    # -----------------------------------------------------
+
+    stock_companies = {
+        "Apple": "AAPL",
+        "Samsung Electronics": "005930.KS",
+        "Dell Technologies": "DELL",
+        "HP Inc.": "HPQ",
+        "Lenovo": "0992.HK",
+        "Sony": "6758.T",
+        "Nike": "NKE",
+        "Adidas": "ADS.DE",
+        "Logitech": "LOGI",
+        "LG Electronics": "066570.KS"
+    }
+
+    selected_company = st.selectbox(
+        "Select Company",
+        list(stock_companies.keys())
+    )
+
+    ticker_symbol = stock_companies[
+        selected_company
+    ]
+
+    # -----------------------------------------------------
+    # TIME PERIOD
+    # -----------------------------------------------------
+
+    period_options = {
+        "1 Month": "1mo",
+        "3 Months": "3mo",
+        "6 Months": "6mo",
+        "1 Year": "1y",
+        "2 Years": "2y",
+        "5 Years": "5y"
+    }
+
+    selected_period = st.selectbox(
+        "Select Historical Period",
+        list(period_options.keys()),
+        index=3
+    )
+
+    period = period_options[
+        selected_period
+    ]
+
+    # -----------------------------------------------------
+    # DOWNLOAD STOCK DATA
+    # -----------------------------------------------------
+
+    try:
+
+        stock_data = yf.download(
+            ticker_symbol,
+            period=period,
+            interval="1d",
+            auto_adjust=True,
+            progress=False
+        )
+
+        if stock_data.empty:
+
+            st.error(
+                "Stock data could not be retrieved "
+                "for this company."
+            )
+
+        else:
+
+            # Handle possible multi-level columns
+            if isinstance(
+                stock_data.columns,
+                pd.MultiIndex
+            ):
+
+                stock_data.columns = (
+                    stock_data.columns
+                    .get_level_values(0)
+                )
+
+            stock_data = stock_data.reset_index()
+
+            # -------------------------------------------------
+            # CALCULATE STOCK METRICS
+            # -------------------------------------------------
+
+            first_price = float(
+                stock_data["Close"].iloc[0]
+            )
+
+            latest_price = float(
+                stock_data["Close"].iloc[-1]
+            )
+
+            highest_price = float(
+                stock_data["High"].max()
+            )
+
+            lowest_price = float(
+                stock_data["Low"].min()
+            )
+
+            price_change = (
+                latest_price -
+                first_price
+            )
+
+            percentage_change = (
+                (price_change / first_price)
+                * 100
+            )
+
+            # -------------------------------------------------
+            # KPI CARDS
+            # -------------------------------------------------
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            col1.metric(
+                "Latest Price",
+                f"{latest_price:,.2f}"
+            )
+
+            col2.metric(
+                "Period Change",
+                f"{price_change:,.2f}",
+                f"{percentage_change:.2f}%"
+            )
+
+            col3.metric(
+                "Highest Price",
+                f"{highest_price:,.2f}"
+            )
+
+            col4.metric(
+                "Lowest Price",
+                f"{lowest_price:,.2f}"
+            )
+
+            st.divider()
+
+            # -------------------------------------------------
+            # STOCK PRICE FLUCTUATION GRAPH
+            # -------------------------------------------------
+
+            st.subheader(
+                f"📊 {selected_company} Stock Price Fluctuation"
+            )
+
+            fig_stock = px.line(
+                stock_data,
+                x="Date",
+                y="Close",
+                title=(
+                    f"{selected_company} "
+                    f"Historical Closing Price"
+                )
+            )
+
+            fig_stock.update_layout(
+                xaxis_title="Date",
+                yaxis_title="Closing Price"
+            )
+
+            st.plotly_chart(
+                fig_stock,
+                use_container_width=True
+            )
+
+            # -------------------------------------------------
+            # HIGH / LOW RANGE
+            # -------------------------------------------------
+
+            st.subheader(
+                "📉 Daily High and Low Price Range"
+            )
+
+            fig_range = px.line(
+                stock_data,
+                x="Date",
+                y=["High", "Low"],
+                title="Daily High vs Low"
+            )
+
+            fig_range.update_layout(
+                xaxis_title="Date",
+                yaxis_title="Price"
+            )
+
+            st.plotly_chart(
+                fig_range,
+                use_container_width=True
+            )
+
+            # -------------------------------------------------
+            # DAILY CHANGE
+            # -------------------------------------------------
+
+            stock_data["Daily Change %"] = (
+                stock_data["Close"]
+                .pct_change()
+                * 100
+            )
+
+            st.subheader(
+                "📈 Daily Percentage Fluctuation"
+            )
+
+            fig_change = px.bar(
+                stock_data,
+                x="Date",
+                y="Daily Change %",
+                title="Daily Stock Price Change (%)"
+            )
+
+            fig_change.update_layout(
+                xaxis_title="Date",
+                yaxis_title="Change (%)"
+            )
+
+            st.plotly_chart(
+                fig_change,
+                use_container_width=True
+            )
+
+            # -------------------------------------------------
+            # STOCK DATA TABLE
+            # -------------------------------------------------
+
+            with st.expander(
+                "View Historical Stock Data"
+            ):
+
+                display_data = stock_data.copy()
+
+                display_data = display_data.sort_values(
+                    "Date",
+                    ascending=False
+                )
+
+                st.dataframe(
+                    display_data,
+                    use_container_width=True
+                )
+
+    except Exception as e:
+
+        st.error(
+            "Unable to retrieve stock information. "
+            "Please check your internet connection "
+            "or try again later."
+        )
+
+        st.caption(
+            f"Technical information: {e}"
         )
 
 
